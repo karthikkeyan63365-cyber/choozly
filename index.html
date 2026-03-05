@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Choozly — Mobile Accessories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div class="shutter-overlay" id="shutterOverlay">
+  <div class="shutter-body" id="shutterBody">
+    <div class="shutter-slats">
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div><div class="slat"></div>
+      <div class="slat"></div><div class="slat"></div>
+    </div>
+    <div class="shutter-brand">
+      <div class="shutter-logo">
+        <span class="logo-icon">⚡</span>
+        <h1>CHOOZLY</h1>
+        <p>Mobile Accessories Store</p>
+      </div>
+      <div class="shutter-hint">
+        <span class="hint-arrow">↑</span>
+        <span>Scroll up to enter</span>
+      </div>
+    </div>
+    <div class="shutter-ground"></div>
+  </div>
+</div>
+
+<div class="store-wrapper" id="storeWrapper">
+
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">⚡ CHOOZLY</a>
+      <div class="nav-search">
+        <input type="text" id="searchInput" placeholder="Search accessories..." oninput="searchProducts()"/>
+        <span class="search-icon">🔍</span>
+      </div>
+      <div class="nav-actions">
+        <button class="cart-btn" onclick="toggleCart()">
+          🛒 Cart <span class="cart-count" id="cartCount">0</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero-banner">
+    <div class="hero-content">
+      <p class="hero-sub">New Arrivals 2026</p>
+      <h1>Power Up Your <br/><span>Mobile Life</span></h1>
+      <p class="hero-desc">Premium cables, chargers, cases & more at unbeatable prices.</p>
+      <a href="#products" class="hero-btn">Shop Now →</a>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-float">⚡</div>
+    </div>
+  </section>
+
+  <section class="categories">
+    <div class="container">
+      <div class="cat-pills">
+        <button class="cat-pill active" onclick="filterCategory('all', this)">All</button>
+        <button class="cat-pill" onclick="filterCategory('charger', this)">⚡ Chargers</button>
+        <button class="cat-pill" onclick="filterCategory('cable', this)">🔌 Cables</button>
+        <button class="cat-pill" onclick="filterCategory('case', this)">📱 Cases</button>
+        <button class="cat-pill" onclick="filterCategory('earphone', this)">🎧 Earphones</button>
+        <button class="cat-pill" onclick="filterCategory('powerbank', this)">🔋 Power Banks</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="products-section" id="products">
+    <div class="container">
+      <h2 class="section-title">Our Products</h2>
+      <div class="products-grid" id="productsGrid"></div>
+      <p class="no-results" id="noResults" style="display:none">No products found.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>⚡ <strong>CHOOZLY</strong> — Your trusted mobile accessories store</p>
+      <p class="footer-links">
+        <a href="admin.html" target="_blank">Admin Dashboard</a>
+      </p>
+    </div>
+  </footer>
+
+</div>
+
+<div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+<div class="cart-sidebar" id="cartSidebar">
+  <div class="cart-header">
+    <h3>🛒 Your Cart</h3>
+    <button onclick="toggleCart()" class="cart-close">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      Total: <strong id="cartTotal">₹0</strong>
+    </div>
+    <button class="checkout-btn" onclick="openCheckout()">Proceed to Checkout →</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📦 Checkout</h3>
+      <button onclick="closeCheckout()" class="modal-close">✕</button>
+    </div>
+    <div class="order-summary" id="orderSummary"></div>
+    <div class="form-section">
+      <h4>Delivery Details</h4>
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="custName" placeholder="Enter your name"/>
+      </div>
+      <div class="form-group">
+        <label>Phone Number *</label>
+        <input type="tel" id="custPhone" placeholder="10-digit mobile number"/>
+      </div>
+      <div class="form-group">
+        <label>Delivery Address *</label>
+        <textarea id="custAddress" rows="3" placeholder="House no, Street, City, Pincode"></textarea>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Payment Method</h4>
+      <div class="payment-options">
+        <label class="pay-option">
+          <input type="radio" name="payment" value="UPI" checked/>
+          <span>📱 UPI (GPay / PhonePe / Paytm)</span>
+        </label>
+        <label class="pay-option">
+          <input type="radio" name="payment" value="COD"/>
+          <span>💵 Cash on Delivery</span>
+        </label>
+        <label class="pay-option">
+          <input type="radio" name="payment" value="Card"/>
+          <span>💳 Credit / Debit Card</span>
+        </label>
+        <label class="pay-option">
+          <input type="radio" name="payment" value="NetBanking"/>
+          <span>🏦 Net Banking</span>
+        </label>
+      </div>
+    </div>
+    <div class="checkout-total">
+      Order Total: <strong id="checkoutTotal">₹0</strong>
+    </div>
+    <button class="place-order-btn" onclick="placeOrder()">✅ Place Order</button>
+    <p class="secure-note">🔒 Safe & Secure Checkout</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="successModal">
+  <div class="modal-box success-box">
+    <div class="success-icon">🎉</div>
+    <h2>Order Placed Successfully!</h2>
+    <p id="successMessage">Thank you for your order. We'll contact you soon.</p>
+    <div class="order-id-box">
+      Order ID: <strong id="displayOrderId"></strong>
+    </div>
+    <button class="success-btn" onclick="closeSuccess()">Continue Shopping</button>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

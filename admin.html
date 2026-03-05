@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Choozly Admin — Orders</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0a; --bg-2: #111; --bg-card: #1a1a1a;
+      --border: #2a2a2a; --text: #f0f0f0; --muted: #888;
+      --accent: #ff6b00; --green: #00c851; --red: #ff4444;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; }
+
+    .admin-nav {
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .admin-nav h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    .nav-right { display:flex; gap:1rem; align-items:center; }
+
+    .refresh-btn {
+      padding: 0.5rem 1.25rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+
+    .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--accent); letter-spacing: 0.03em; }
+
+    .orders-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Orders table */
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .orders-table th {
+      background: var(--bg-card);
+      padding: 0.85rem 1rem;
+      text-align: left;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .orders-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .orders-table tr:hover td { background: rgba(255,107,0,0.04); }
+
+    .order-id { color: var(--accent); font-weight: 600; font-size: 0.8rem; }
+    .customer-name { font-weight: 500; }
+    .phone { color: var(--muted); font-size: 0.85rem; }
+    .address { color: var(--muted); font-size: 0.8rem; max-width: 200px; }
+    .total { color: var(--accent); font-weight: 700; font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; }
+    .timestamp { color: var(--muted); font-size: 0.78rem; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-pending  { background: rgba(255,214,10,0.15); color: #ffd60a; }
+    .status-shipped  { background: rgba(0,200,81,0.15);   color: var(--green); }
+    .status-delivered{ background: rgba(0,200,81,0.25);   color: var(--green); }
+
+    .items-list { font-size: 0.8rem; color: var(--muted); }
+    .items-list span { display: block; }
+
+    .loading {
+      text-align: center;
+      padding: 4rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .no-orders {
+      text-align: center;
+      padding: 4rem;
+      color: var(--muted);
+    }
+
+    .setup-warning {
+      background: rgba(255,107,0,0.1);
+      border: 1px solid rgba(255,107,0,0.3);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin: 1rem 2rem;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .setup-warning h3 { color: var(--accent); margin-bottom: 0.5rem; }
+    .setup-warning p { color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
+    .setup-warning code {
+      background: var(--bg-card);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    @media (max-width: 768px) {
+      .orders-table { font-size: 0.8rem; }
+      .orders-table th, .orders-table td { padding: 0.6rem 0.5rem; }
+      .address { max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="admin-nav">
+    <h1>⚡ CHOOZLY — Admin</h1>
+    <div class="nav-right">
+      <span id="orderCount" style="color:var(--muted);font-size:0.9rem;"></span>
+      <button class="refresh-btn" onclick="loadOrders()">🔄 Refresh</button>
+    </div>
+  </nav>
+
+  <!-- Setup warning — shown if Firebase not configured -->
+  <div class="setup-warning" id="setupWarning" style="display:none">
+    <h3>⚠️ Firebase Not Configured Yet</h3>
+    <p>
+      To see real orders here, you need to set up Firebase first.<br/>
+      Open <code>firebase.js</code> and replace the <code>firebaseConfig</code> values with your own.<br/>
+      Get your config from: <strong>Firebase Console → Project Settings → Your apps</strong>
+    </p>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Orders</div>
+      <div class="stat-value" id="statTotal">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Revenue</div>
+      <div class="stat-value" id="statRevenue">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value" id="statPending">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Order Value</div>
+      <div class="stat-value" id="statAvg">—</div>
+    </div>
+  </div>
+
+  <!-- Orders table -->
+  <div class="orders-section">
+    <div class="section-header">
+      <h2>All Orders</h2>
+    </div>
+
+    <div id="ordersContainer">
+      <div class="loading">Loading orders...</div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK + load orders -->
+  <script type="module">
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, orderBy, query }
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Use the same config as firebase.js
+    // You need to paste your config here too
+    const firebaseConfig = {
+      apiKey:            "YOUR_API_KEY",
+      authDomain:        "YOUR_PROJECT.firebaseapp.com",
+      projectId:         "YOUR_PROJECT_ID",
+      storageBucket:     "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId:             "YOUR_APP_ID"
+    };
+
+    let app, db;
+
+    try {
+      app = initializeApp(firebaseConfig, 'admin');
+      db  = getFirestore(app);
+    } catch(e) {
+      document.getElementById('setupWarning').style.display = 'block';
+      document.getElementById('ordersContainer').innerHTML =
+        '<div class="no-orders">⚠️ Firebase not configured. See warning above.</div>';
+    }
+
+    window.loadOrders = async function() {
+      if (!db) return;
+
+      document.getElementById('ordersContainer').innerHTML = '<div class="loading">Loading...</div>';
+
+      try {
+        const q = query(collection(db, "orders"), orderBy("timestamp", "desc"));
+        const snapshot = await getDocs(q);
+
+        const orders = [];
+        snapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+
+        renderOrders(orders);
+        renderStats(orders);
+        document.getElementById('orderCount').textContent = `${orders.length} orders`;
+
+      } catch (err) {
+        console.error(err);
+        // If config not set up yet
+        if (err.code === 'permission-denied' || err.message.includes('projectId')) {
+          document.getElementById('setupWarning').style.display = 'block';
+          document.getElementById('ordersContainer').innerHTML =
+            '<div class="no-orders">⚠️ Firebase not configured. See warning above.</div>';
+        } else {
+          document.getElementById('ordersContainer').innerHTML =
+            `<div class="no-orders">Error loading orders: ${err.message}</div>`;
+        }
+      }
+    };
+
+    function renderStats(orders) {
+      const total   = orders.length;
+      const revenue = orders.reduce((s, o) => s + (o.totalPrice || 0), 0);
+      const pending = orders.filter(o => o.status === 'pending').length;
+      const avg     = total ? Math.round(revenue / total) : 0;
+
+      document.getElementById('statTotal').textContent   = total;
+      document.getElementById('statRevenue').textContent = `₹${revenue}`;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statAvg').textContent     = `₹${avg}`;
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('ordersContainer');
+
+      if (orders.length === 0) {
+        container.innerHTML = '<div class="no-orders">No orders yet. Share your store link!</div>';
+        return;
+      }
+
+      const rows = orders.map(order => {
+        const itemsList = (order.items || [])
+          .map(i => `<span>${i.emoji} ${i.name} × ${i.qty}</span>`)
+          .join('');
+
+        const date = order.timestamp
+          ? new Date(order.timestamp).toLocaleString('en-IN')
+          : '—';
+
+        return `
+          <tr>
+            <td><span class="order-id">${order.orderId || order.id}</span></td>
+            <td>
+              <div class="customer-name">${order.customerName || '—'}</div>
+              <div class="phone">${order.phone || ''}</div>
+            </td>
+            <td><div class="address">${order.address || '—'}</div></td>
+            <td><div class="items-list">${itemsList}</div></td>
+            <td>${order.paymentMethod || '—'}</td>
+            <td><span class="total">₹${order.totalPrice || 0}</span></td>
+            <td><span class="status-badge status-${order.status || 'pending'}">${order.status || 'pending'}</span></td>
+            <td><span class="timestamp">${date}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Address</th>
+              <th>Items</th>
+              <th>Payment</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // Load on page open
+    loadOrders();
+  </script>
+
+</body>
+</html>
