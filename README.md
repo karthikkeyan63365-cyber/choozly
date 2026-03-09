@@ -1,2 +1,0 @@
-# choozly
-ecommerce web protoype
