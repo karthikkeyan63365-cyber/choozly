@@ -1791,6 +1791,10 @@
       transform: translateX(-50%) translateY(0);
     }
   </style>
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -2255,35 +2259,39 @@
     // ── CATEGORY CHIPS (handled via onclick) ──
 
     // ── PRODUCT DATA ──
-    const products = [
-      { id:1, name:'Wireless Charging Pad 15W Fast', category:'Mobile', emoji:'📱', price:'₹799', oldPrice:'₹1,299', discount:'-38%' },
-      { id:2, name:'65W Laptop & Phone Charger', category:'Electronics', emoji:'💻', price:'₹1,799', oldPrice:'₹2,999', discount:'-40%' },
-      { id:3, name:"Men's Slim Fit Cotton T-Shirt", category:'Clothes', emoji:'👕', price:'₹449', oldPrice:'₹899', discount:'-50%' },
-      { id:4, name:'Rich Dad Poor Dad — Robert Kiyosaki', category:'Books', emoji:'📚', price:'₹299', oldPrice:'₹425', discount:'-30%' },
-      { id:5, name:'LEGO Classic Creative Brick Box', category:'Toys', emoji:'🧸', price:'₹1,299', oldPrice:'₹1,749', discount:'-25%' },
-      { id:6, name:"Men's Running Sports Shoes", category:'Footwear', emoji:'👟', price:'₹999', oldPrice:'₹1,799', discount:'-45%' },
-      { id:7, name:'33W Dual Port Fast Charger', category:'Mobile', emoji:'📱', price:'₹649', oldPrice:'₹999', discount:'-35%' },
-      { id:8, name:'Bluetooth Earbuds Pro', category:'Electronics', emoji:'🎧', price:'₹1,199', oldPrice:'₹2,499', discount:'-52%' },
-      { id:9, name:"Women's Kurti Ethnic Wear", category:'Clothes', emoji:'👗', price:'₹599', oldPrice:'₹1,200', discount:'-50%' },
-      { id:10, name:'Remote Control Racing Car', category:'Toys', emoji:'🚗', price:'₹799', oldPrice:'₹1,499', discount:'-47%' },
-      { id:11, name:'Atomic Habits — James Clear', category:'Books', emoji:'📖', price:'₹349', oldPrice:'₹499', discount:'-30%' },
-      { id:12, name:'Casual Sneakers White', category:'Footwear', emoji:'👟', price:'₹849', oldPrice:'₹1,599', discount:'-47%' },
-    ];
-
+    // ── PRODUCTS FROM FIRESTORE ──
+    let products = [];
     let activeCategory = 'All';
     let searchQuery = '';
+
+    async function loadProducts() {
+      const container = document.getElementById('homeProducts');
+      container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--subtext)"><div style="font-size:2rem;margin-bottom:10px">⏳</div><div>Loading products...</div></div>`;
+      try {
+        const snapshot = await db.collection('products').get();
+        products = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          price: `₹${Number(doc.data().price).toLocaleString('en-IN')}`,
+          oldPrice: `₹${Number(doc.data().oldPrice).toLocaleString('en-IN')}`
+        }));
+        renderHomeProducts();
+      } catch(e) {
+        console.error(e);
+        container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--subtext)">Failed to load products. Check your connection.</div>`;
+      }
+    }
 
     // ── RENDER HOME PRODUCTS ──
     function renderHomeProducts() {
       const container = document.getElementById('homeProducts');
       let filtered = products.filter(p => {
-        const matchCat = activeCategory === 'All' || p.category === activeCategory;
+        const matchCat = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
         const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             p.category.toLowerCase().includes(searchQuery.toLowerCase());
         return matchCat && matchSearch;
       });
 
-      // Hide/show banner
       document.getElementById('homeBanner').style.display = (searchQuery || activeCategory !== 'All') ? 'none' : 'block';
 
       if (filtered.length === 0) {
@@ -2304,8 +2312,8 @@
         </div>
         <div class="product-grid">
           ${filtered.map(p => `
-            <div class="product-card" onclick="openProduct(${p.id})">
-              <div class="product-img">${p.emoji}</div>
+            <div class="product-card" onclick="openProductById('${p.id}')">
+              <div class="product-img">${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>` : p.emoji}</div>
               <div class="category-badge">${p.category}</div>
               <div class="discount-badge">${p.discount}</div>
               <div class="product-info">
@@ -2319,14 +2327,17 @@
         </div>`;
     }
 
+    function openProductById(id) {
+      const p = products.find(x => x.id === id);
+      if (p) openProductData(p);
+    }
+
     // ── FILTER BY CATEGORY ──
     function filterByCategory(cat) {
       activeCategory = cat;
       searchQuery = '';
       document.getElementById('searchInput').value = '';
-      // Update chips
       document.querySelectorAll('.chip').forEach(chip => {
-        const chipText = chip.textContent.trim().replace(/[📱💻👕🧸📚👟🏠]/g,'').trim();
         const match = cat === 'All' ? chip.textContent.includes('All') :
                       chip.textContent.toLowerCase().includes(cat.toLowerCase());
         chip.classList.toggle('active', match);
@@ -2344,17 +2355,26 @@
       renderHomeProducts();
     }
 
-    // Initial render
-    renderHomeProducts();
+    // Load products from Firestore on start
+    loadProducts();
 
     // ── OPEN PRODUCT PAGE ──
     function openProduct(id) {
       const p = products.find(x => x.id === id);
-      if (!p) return;
+      if (p) openProductData(p);
+    }
+
+    function openProductData(p) {
       currentProduct = p;
       currentQty = 1;
       document.getElementById('productPageTitle').textContent = p.name;
-      document.getElementById('productImg').textContent = p.emoji;
+      // Show image if available, else emoji
+      const imgEl = document.getElementById('productImg');
+      if (p.image) {
+        imgEl.innerHTML = `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;border-radius:16px"/>`;
+      } else {
+        imgEl.textContent = p.emoji || '📦';
+      }
       document.getElementById('productCategory').textContent = p.category;
       document.getElementById('productName').textContent = p.name;
       document.getElementById('productPrice').textContent = p.price;
@@ -2527,25 +2547,87 @@
       document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
     }
 
-    function handleLogin() {
-      const nameEl = document.getElementById('signupName');
-      const isSignup = nameEl && nameEl.closest('#signupForm') && document.getElementById('signupForm').style.display !== 'none';
-      if (nameEl && nameEl.value) currentUser.name = nameEl.value;
-      isLoggedIn = true;
-      if (isSignup) {
-        const name = currentUser.name !== 'User' ? currentUser.name : 'there';
-        showSuccessPopup(
-          `Welcome, ${name}! 🎉`,
-          `Your Choozly account has been created successfully. Start shopping now!`,
-          'Start Shopping'
-        );
+    // ── FIREBASE REAL AUTH ──
+    // ── FIREBASE REAL AUTH (Compat) ──
+    const firebaseConfig = {
+      apiKey: "AIzaSyAtsUgFdFRixQBqXyGKz4xkjbmPRwgxjnM",
+      authDomain: "choozly.firebaseapp.com",
+      projectId: "choozly",
+      storageBucket: "choozly.firebasestorage.app",
+      messagingSenderId: "645255668922",
+      appId: "1:645255668922:web:078a53fce6fbd725c88e83"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Track auth state
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        isLoggedIn = true;
+        currentUser = { name: user.displayName || 'Choozly User', email: user.email };
       } else {
-        showSuccessPopup(
-          'Login Successful! 🎉',
-          'Welcome back to Choozly. You are now signed in.',
-          'Continue Shopping'
-        );
+        isLoggedIn = false;
+        currentUser = { name: 'User', email: '' };
       }
+    });
+
+    async function handleLogin() {
+      const nameEl = document.getElementById('signupName');
+      const isSignup = nameEl && document.getElementById('signupForm').style.display !== 'none';
+
+      if (isSignup) {
+        const name = document.getElementById('signupName').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
+        const pass = document.getElementById('signupPass').value.trim();
+
+        if (!name || !email || !pass) { showToast('Please fill all fields'); return; }
+        if (pass.length < 6) { showToast('Password must be at least 6 characters'); return; }
+
+        try {
+          const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+          await userCred.user.updateProfile({ displayName: name });
+          await db.collection('users').doc(userCred.user.uid).set({
+            name, email, createdAt: new Date().toISOString()
+          });
+          isLoggedIn = true;
+          currentUser = { name, email };
+          showSuccessPopup(`Welcome, ${name}! 🎉`, `Your Choozly account has been created successfully.`, 'Start Shopping');
+        } catch (err) {
+          if (err.code === 'auth/email-already-in-use') showToast('Email already registered. Please sign in.');
+          else if (err.code === 'auth/invalid-email') showToast('Please enter a valid email address.');
+          else showToast('Something went wrong. Try again.');
+        }
+
+      } else {
+        const email = document.getElementById('loginInput').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+
+        if (!email || !pass) { showToast('Please enter email and password'); return; }
+
+        try {
+          const userCred = await auth.signInWithEmailAndPassword(email, pass);
+          isLoggedIn = true;
+          currentUser = { name: userCred.user.displayName || 'Choozly User', email: userCred.user.email };
+          showSuccessPopup('Login Successful! 🎉', `Welcome back, ${currentUser.name}!`, 'Continue Shopping');
+        } catch (err) {
+          if (err.code === 'auth/user-not-found') showToast('No account found. Please create one.');
+          else if (err.code === 'auth/wrong-password') showToast('Wrong password. Try again.');
+          else if (err.code === 'auth/invalid-credential') showToast('Wrong email or password.');
+          else showToast('Login failed. Try again.');
+        }
+      }
+    }
+
+    async function handleLogout() {
+      await auth.signOut();
+      isLoggedIn = false;
+      currentUser = { name: 'User', email: '' };
+      cart = [];
+      updateCartBadge();
+      closeProfile();
+      showToast('Logged out successfully');
     }
 
     // ── SUCCESS POPUP ──
@@ -2716,8 +2798,7 @@
       }
     });
 
-    // ── PROFILE PAGE ──
-    function openProfile() {
+    // ── PROFILE PAGE ──    function openProfile() {
       document.getElementById('profileName').textContent = isLoggedIn ? currentUser.name : 'Guest User';
       document.getElementById('profileEmail').textContent = isLoggedIn ? 'Choozly Member' : 'Sign in to access your account';
       document.getElementById('profileOrderCount').textContent = orders.length;
@@ -2728,15 +2809,6 @@
     function closeProfile() {
       document.getElementById('profilePage').classList.remove('open');
       document.body.style.overflow = '';
-    }
-
-    function handleLogout() {
-      isLoggedIn = false;
-      currentUser = { name: 'User', email: '' };
-      cart = [];
-      updateCartBadge();
-      closeProfile();
-      showToast('Logged out successfully');
     }
 
     // ── ORDERS PAGE ──
