@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Upload 200 Products</title>
+</head>
+<body>
+
+<h2>Upload 200 Products</h2>
+<button onclick="uploadProducts()">Upload Products</button>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* PUT YOUR FIREBASE CONFIG HERE (copy from your website) */
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* CATEGORY LIST */
+const categories = [
+"Mobiles",
+"Electronics",
+"Clothes",
+"Toys",
+"Books",
+"Footwear",
+"Home & Kitchen"
+];
+
+/* IMAGE LIST */
+const images = [
+"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+"https://images.unsplash.com/photo-1598327105666-5b89351aff97",
+"https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
+"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
+"https://images.unsplash.com/photo-1542291026-7eec264c27ff",
+"https://images.unsplash.com/photo-1556911220-bff31c812dba",
+"https://images.unsplash.com/photo-1512820790803-83ca734da794",
+"https://images.unsplash.com/photo-1601758064220-1c3c2b9c7e27"
+];
+
+async function uploadProducts(){
+
+for(let i=1;i<=200;i++){
+
+let category = categories[i % categories.length];
+let image = images[i % images.length];
+
+await addDoc(collection(db,"products"),{
+
+name: category + " Product " + i,
+category: category,
+price: Math.floor(Math.random()*20000)+500,
+originalPrice: Math.floor(Math.random()*25000)+1000,
+discount: "-20%",
+emoji: "🛒",
+image: image
+
+});
+
+console.log("Added product",i);
+
+}
+
+alert("200 products uploaded!");
+
+}
+
+window.uploadProducts = uploadProducts;
+
+</script>
+
+</body>
+</html>
