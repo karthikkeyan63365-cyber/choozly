@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Choozly Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: #f4f6fb; color: #1a1a2e; min-height: 100vh; }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #592E83, #7c3aed);
+      color: white;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(89,46,131,0.3);
+    }
+    .header-logo { font-size: 1.5rem; font-weight: 700; }
+    .header-logo span { color: #FFB60A; }
+    .header-sub { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
+    .header-badge { background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .stat-val { font-size: 2rem; font-weight: 700; color: #592E83; }
+    .stat-label { font-size: 0.8rem; color: #888; margin-top: 4px; }
+
+    /* MAIN GRID */
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media(max-width:768px) { .main-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2,1fr); } }
+
+    /* CARD */
+    .card { background: white; border-radius: 20px; padding: 28px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #592E83; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+    /* FORM */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 6px; display: block; }
+    .form-input, .form-select {
+      width: 100%; padding: 10px 14px; border: 2px solid #eee; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #1a1a2e;
+      transition: border 0.2s;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: #592E83; }
+    .form-input.full { grid-column: 1/-1; }
+
+    /* IMAGE PREVIEW */
+    .img-preview {
+      width: 100%; height: 140px; border: 2px dashed #ddd; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; background: #fafafa; margin-bottom: 12px;
+      overflow: hidden; transition: border 0.2s;
+    }
+    .img-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    .img-preview.has-img { border-color: #592E83; }
+
+    /* QUICK IMAGES */
+    .quick-title { font-size: 0.78rem; font-weight: 600; color: #888; margin-bottom: 8px; }
+    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+    .quick-img {
+      height: 52px; border-radius: 8px; cursor: pointer; object-fit: cover;
+      border: 2px solid transparent; transition: all 0.2s;
+    }
+    .quick-img:hover, .quick-img.selected { border-color: #592E83; transform: scale(1.05); }
+
+    /* BUTTONS */
+    .btn-add {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #592E83, #7c3aed);
+      color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+    }
+    .btn-add:hover { opacity: 0.9; }
+    .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-delete {
+      background: #fff0f0; color: #e53935; border: none; border-radius: 8px;
+      padding: 6px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-edit {
+      background: #f3e5f5; color: #592E83; border: none; border-radius: 8px;
+      padding: 6px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-right: 4px;
+    }
+
+    /* PRODUCT LIST */
+    .product-list { max-height: 520px; overflow-y: auto; }
+    .product-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px;
+      border-radius: 12px; margin-bottom: 8px; background: #fafafa;
+      border: 1px solid #f0f0f0; transition: background 0.2s;
+    }
+    .product-item:hover { background: #f3e5f5; }
+    .product-thumb {
+      width: 52px; height: 52px; border-radius: 10px; object-fit: cover;
+      background: #eee; display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; flex-shrink: 0; overflow: hidden;
+    }
+    .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .product-info { flex: 1; min-width: 0; }
+    .product-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-meta { font-size: 0.75rem; color: #888; margin-top: 2px; }
+    .product-price { font-weight: 700; color: #592E83; font-size: 0.9rem; }
+    .product-actions { display: flex; flex-shrink: 0; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1a1a2e; color: white; padding: 12px 24px; border-radius: 12px;
+      font-size: 0.9rem; font-weight: 600; transition: transform 0.3s; z-index: 999;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* SEARCH */
+    .search-input {
+      width: 100%; padding: 10px 14px; border: 2px solid #eee; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; margin-bottom: 14px;
+    }
+    .search-input:focus { outline: none; border-color: #592E83; }
+
+    /* CATEGORY FILTER */
+    .cat-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .cat-chip {
+      padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+      background: #f0f0f0; color: #555; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .cat-chip.active { background: #592E83; color: white; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 40px 20px; color: #aaa; }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 30px; color: #592E83; font-weight: 600; }
+
+    /* FREE IMAGES SECTION */
+    .free-images-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 12px; }
+    .free-cat-title { font-size: 0.75rem; color: #888; font-weight: 600; margin-bottom: 4px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">Ch<span>oo</span>zly <span style="font-size:1rem;font-weight:400;opacity:0.8">Admin</span></div>
+    <div class="header-sub">Product Management Panel</div>
+  </div>
+  <div class="header-badge">🔒 Admin Only</div>
+</div>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="statTotal">0</div>
+      <div class="stat-label">Total Products</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statInStock">0</div>
+      <div class="stat-label">In Stock</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statCategories">0</div>
+      <div class="stat-label">Categories</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statWithImg">0</div>
+      <div class="stat-label">With Images</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ADD PRODUCT FORM -->
+    <div class="card">
+      <div class="card-title">➕ Add New Product</div>
+
+      <!-- IMAGE PREVIEW -->
+      <div class="img-preview" id="imgPreview">📦</div>
+
+      <!-- QUICK FREE IMAGES -->
+      <div class="quick-title">⚡ Quick Free Images (click to use)</div>
+      <div id="quickImagesContainer"></div>
+
+      <div class="form-group">
+        <label class="form-label">Image URL (paste Unsplash/Pexels link or leave blank)</label>
+        <input class="form-input" id="fImage" type="text" placeholder="https://images.unsplash.com/..." oninput="previewImage(this.value)"/>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Product Name *</label>
+          <input class="form-input" id="fName" type="text" placeholder="e.g. Wireless Earbuds Pro"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <select class="form-select" id="fCategory" onchange="updateQuickImages()">
+            <option value="">Select category</option>
+            <option value="Mobile">Mobile</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Clothes">Clothes</option>
+            <option value="Footwear">Footwear</option>
+            <option value="Books">Books</option>
+            <option value="Toys">Toys</option>
+            <option value="Home">Home</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Sports">Sports</option>
+            <option value="Food">Food</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Price (₹) *</label>
+          <input class="form-input" id="fPrice" type="number" placeholder="799"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Original Price (₹) *</label>
+          <input class="form-input" id="fOldPrice" type="number" placeholder="1299"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Discount Label</label>
+          <input class="form-input" id="fDiscount" type="text" placeholder="-38%" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emoji (backup)</label>
+          <input class="form-input" id="fEmoji" type="text" placeholder="📱"/>
+        </div>
+      </div>
+
+      <button class="btn-add" id="addBtn" onclick="addProduct()">➕ Add Product to Store</button>
+    </div>
+
+    <!-- PRODUCT LIST -->
+    <div class="card">
+      <div class="card-title">📦 All Products</div>
+      <input class="search-input" type="text" placeholder="🔍 Search products..." oninput="filterProducts(this.value)"/>
+      <div class="cat-filter" id="catFilter"></div>
+      <div class="product-list" id="productList">
+        <div class="loading">Loading products...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── FIREBASE ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtsUgFdFRixQBqXyGKz4xkjbmPRwgxjnM",
+    authDomain: "choozly.firebaseapp.com",
+    projectId: "choozly",
+    storageBucket: "choozly.firebasestorage.app",
+    messagingSenderId: "645255668922",
+    appId: "1:645255668922:web:078a53fce6fbd725c88e83"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // ── FREE IMAGE LIBRARY ──
+  const freeImages = {
+    Mobile: [
+      'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=300',
+      'https://images.unsplash.com/photo-1583394293214-0b44e1e5e2e0?w=300',
+      'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=300',
+      'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=300',
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300',
+    ],
+    Electronics: [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300',
+      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=300',
+      'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?w=300',
+      'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=300',
+      'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300',
+    ],
+    Clothes: [
+      'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300',
+      'https://images.unsplash.com/photo-1542060748-10c28b62716f?w=300',
+      'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=300',
+      'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=300',
+      'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=300',
+    ],
+    Footwear: [
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300',
+      'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=300',
+      'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=300',
+      'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=300',
+      'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=300',
+    ],
+    Books: [
+      'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300',
+      'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300',
+      'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300',
+      'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=300',
+      'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=300',
+    ],
+    Toys: [
+      'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?w=300',
+      'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=300',
+      'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=300',
+      'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=300',
+      'https://images.unsplash.com/photo-1561149877-84d268ba65b8?w=300',
+    ],
+    Home: [
+      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300',
+      'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=300',
+      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300',
+      'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=300',
+      'https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=300',
+    ],
+    Beauty: [
+      'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=300',
+      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300',
+      'https://images.unsplash.com/photo-1583241475880-083f84372725?w=300',
+      'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=300',
+      'https://images.unsplash.com/photo-1512207736890-6ffed8a84e8d?w=300',
+    ],
+    Sports: [
+      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300',
+      'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=300',
+      'https://images.unsplash.com/photo-1598289431512-b97b0917afbe?w=300',
+      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300',
+      'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=300',
+    ],
+    Food: [
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300',
+      'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=300',
+      'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=300',
+      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300',
+      'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=300',
+    ],
+  };
+
+  // Default images for any category
+  const defaultImages = [
+    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300',
+    'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300',
+    'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=300',
+    'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300',
+    'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=300',
+  ];
+
+  // ── STATE ──
+  let allProducts = [];
+  let filterCat = 'All';
+  let filterSearch = '';
+
+  // ── LOAD PRODUCTS ──
+  async function loadProducts() {
+    try {
+      const snap = await db.collection('products').get();
+      allProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateStats();
+      renderProducts();
+      renderCatFilter();
+    } catch(e) {
+      document.getElementById('productList').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Failed to load</div>';
+    }
+  }
+
+  // ── STATS ──
+  function updateStats() {
+    document.getElementById('statTotal').textContent = allProducts.length;
+    document.getElementById('statInStock').textContent = allProducts.filter(p => p.inStock !== false).length;
+    const cats = new Set(allProducts.map(p => p.category).filter(Boolean));
+    document.getElementById('statCategories').textContent = cats.size;
+    document.getElementById('statWithImg').textContent = allProducts.filter(p => p.image).length;
+  }
+
+  // ── RENDER PRODUCTS ──
+  function renderProducts() {
+    const list = document.getElementById('productList');
+    let filtered = allProducts.filter(p => {
+      const matchCat = filterCat === 'All' || p.category === filterCat;
+      const matchSearch = (p.name || '').toLowerCase().includes(filterSearch.toLowerCase());
+      return matchCat && matchSearch;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No products found</div></div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(p => {
+      const thumb = p.image
+        ? '<img src="' + p.image + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.parentElement.textContent=\'' + (p.emoji||'📦') + '\'">'
+        : (p.emoji || '📦');
+      return '<div class="product-item">' +
+        '<div class="product-thumb">' + thumb + '</div>' +
+        '<div class="product-info">' +
+          '<div class="product-name">' + (p.name||'') + '</div>' +
+          '<div class="product-meta">' + (p.category||'') + ' · ' + (p.discount||'') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div class="product-price">₹' + (p.price||0).toLocaleString('en-IN') + '</div>' +
+          '<div class="product-actions" style="margin-top:6px">' +
+            '<button class="btn-edit" onclick="editProduct(\'' + p.id + '\')">✏️</button>' +
+            '<button class="btn-delete" onclick="deleteProduct(\'' + p.id + '\',\'' + (p.name||'').replace(/'/g,'') + '\')">🗑️</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── CAT FILTER ──
+  function renderCatFilter() {
+    const cats = ['All', ...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    document.getElementById('catFilter').innerHTML = cats.map(c =>
+      '<button class="cat-chip' + (c === filterCat ? ' active' : '') + '" onclick="setCatFilter(\'' + c + '\')">' + c + '</button>'
+    ).join('');
+  }
+
+  function setCatFilter(cat) {
+    filterCat = cat;
+    renderCatFilter();
+    renderProducts();
+  }
+
+  function filterProducts(val) {
+    filterSearch = val;
+    renderProducts();
+  }
+
+  // ── QUICK IMAGES ──
+  function updateQuickImages() {
+    const cat = document.getElementById('fCategory').value;
+    const imgs = freeImages[cat] || defaultImages;
+    const container = document.getElementById('quickImagesContainer');
+    container.innerHTML = '<div class="quick-title">Click an image to use it:</div><div class="quick-grid">' +
+      imgs.map(url =>
+        '<img class="quick-img" src="' + url + '" onclick="selectQuickImage(\'' + url + '\')" title="Click to use"/>'
+      ).join('') +
+    '</div>';
+  }
+
+  function selectQuickImage(url) {
+    document.getElementById('fImage').value = url;
+    previewImage(url);
+    document.querySelectorAll('.quick-img').forEach(img => {
+      img.classList.toggle('selected', img.src === url || img.src.includes(url.split('?')[0].split('/').pop()));
+    });
+  }
+
+  function previewImage(url) {
+    const preview = document.getElementById('imgPreview');
+    if (url) {
+      preview.innerHTML = '<img src="' + url + '" onerror="this.parentElement.textContent=\'❌ Invalid URL\'">';
+      preview.classList.add('has-img');
+    } else {
+      const cat = document.getElementById('fCategory').value;
+      const emojis = { Mobile:'📱', Electronics:'💻', Clothes:'👕', Footwear:'👟', Books:'📚', Toys:'🧸', Home:'🏠', Beauty:'💄', Sports:'⚽', Food:'🍕' };
+      preview.textContent = emojis[cat] || '📦';
+      preview.classList.remove('has-img');
+    }
+  }
+
+  // ── AUTO DISCOUNT ──
+  document.addEventListener('DOMContentLoaded', function() {
+    updateQuickImages();
+    ['fPrice','fOldPrice'].forEach(id => {
+      document.getElementById(id).addEventListener('input', function() {
+        const price = parseInt(document.getElementById('fPrice').value);
+        const old = parseInt(document.getElementById('fOldPrice').value);
+        if (price && old && old > price) {
+          const pct = Math.round((1 - price/old) * 100);
+          document.getElementById('fDiscount').value = '-' + pct + '%';
+        }
+      });
+    });
+    loadProducts();
+  });
+
+  // ── ADD PRODUCT ──
+  async function addProduct() {
+    const name = document.getElementById('fName').value.trim();
+    const category = document.getElementById('fCategory').value;
+    const price = parseInt(document.getElementById('fPrice').value);
+    const oldPrice = parseInt(document.getElementById('fOldPrice').value);
+    const discount = document.getElementById('fDiscount').value.trim();
+    const emoji = document.getElementById('fEmoji').value.trim() || '📦';
+    const image = document.getElementById('fImage').value.trim();
+
+    if (!name) { showToast('⚠️ Please enter product name'); return; }
+    if (!category) { showToast('⚠️ Please select a category'); return; }
+    if (!price) { showToast('⚠️ Please enter price'); return; }
+    if (!oldPrice) { showToast('⚠️ Please enter original price'); return; }
+
+    const btn = document.getElementById('addBtn');
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+
+    try {
+      await db.collection('products').add({
+        name, category, price, oldPrice,
+        discount: discount || ('-' + Math.round((1 - price/oldPrice)*100) + '%'),
+        emoji, image, inStock: true,
+        createdAt: new Date().toISOString()
+      });
+
+      showToast('✅ ' + name + ' added!');
+      clearForm();
+      await loadProducts();
+    } catch(e) {
+      showToast('❌ Failed to add: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = '➕ Add Product to Store';
+  }
+
+  // ── DELETE ──
+  async function deleteProduct(id, name) {
+    if (!confirm('Delete "' + name + '"?')) return;
+    try {
+      await db.collection('products').doc(id).delete();
+      showToast('🗑️ Deleted: ' + name);
+      await loadProducts();
+    } catch(e) {
+      showToast('❌ Delete failed');
+    }
+  }
+
+  // ── EDIT (fill form) ──
+  function editProduct(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('fName').value = p.name || '';
+    document.getElementById('fCategory').value = p.category || '';
+    document.getElementById('fPrice').value = p.price || '';
+    document.getElementById('fOldPrice').value = p.oldPrice || '';
+    document.getElementById('fDiscount').value = p.discount || '';
+    document.getElementById('fEmoji').value = p.emoji || '';
+    document.getElementById('fImage').value = p.image || '';
+    previewImage(p.image || '');
+    updateQuickImages();
+
+    // Change button to update
+    const btn = document.getElementById('addBtn');
+    btn.textContent = '💾 Update Product';
+    btn.onclick = async function() {
+      const name = document.getElementById('fName').value.trim();
+      const category = document.getElementById('fCategory').value;
+      const price = parseInt(document.getElementById('fPrice').value);
+      const oldPrice = parseInt(document.getElementById('fOldPrice').value);
+      btn.disabled = true; btn.textContent = 'Updating...';
+      try {
+        await db.collection('products').doc(id).update({
+          name, category, price, oldPrice,
+          discount: document.getElementById('fDiscount').value.trim(),
+          emoji: document.getElementById('fEmoji').value.trim() || '📦',
+          image: document.getElementById('fImage').value.trim()
+        });
+        showToast('✅ Updated: ' + name);
+        clearForm();
+        await loadProducts();
+      } catch(e) { showToast('❌ Update failed'); }
+      btn.disabled = false;
+    };
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast('✏️ Editing: ' + p.name);
+  }
+
+  // ── CLEAR FORM ──
+  function clearForm() {
+    ['fName','fCategory','fPrice','fOldPrice','fDiscount','fEmoji','fImage'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('imgPreview').textContent = '📦';
+    document.getElementById('imgPreview').classList.remove('has-img');
+    updateQuickImages();
+    const btn = document.getElementById('addBtn');
+    btn.textContent = '➕ Add Product to Store';
+    btn.onclick = addProduct;
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
