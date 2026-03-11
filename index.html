@@ -2396,6 +2396,10 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // ── USER STATE (must be before onAuthStateChanged) ──
+    let isLoggedIn = false;
+    let currentUser = { name: 'User', email: '' };
+
     // Track auth state
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -2437,19 +2441,27 @@
 
     async function loadProducts() {
       const container = document.getElementById('homeProducts');
-      container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--subtext)"><div style="font-size:2rem;margin-bottom:10px">⏳</div><div>Loading products...</div></div>`;
+      container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--subtext)"><div style="font-size:2rem;margin-bottom:10px">⏳</div><div>Loading products...</div></div>';
       try {
         const snapshot = await db.collection('products').get();
-        products = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          price: `₹${Number(doc.data().price).toLocaleString('en-IN')}`,
-          oldPrice: `₹${Number(doc.data().oldPrice).toLocaleString('en-IN')}`
-        }));
+        products = snapshot.docs.map(function(doc) {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            name: d.name || 'Product',
+            category: d.category || 'General',
+            emoji: d.emoji || '📦',
+            image: d.image || '',
+            discount: d.discount || '',
+            inStock: d.inStock !== false,
+            price: '₹' + Number(d.price || 0).toLocaleString('en-IN'),
+            oldPrice: '₹' + Number(d.oldPrice || 0).toLocaleString('en-IN')
+          };
+        });
         renderHomeProducts();
       } catch(e) {
-        console.error(e);
-        container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--subtext)">Failed to load products. Check your connection.</div>`;
+        console.error('Firestore error:', e);
+        container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--subtext)">Failed to load products. Check your connection.</div>';
       }
     }
 
@@ -2457,9 +2469,9 @@
     function renderHomeProducts() {
       const container = document.getElementById('homeProducts');
       let filtered = products.filter(function(p) {
-        var matchCat = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
-        var matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.category.toLowerCase().includes(searchQuery.toLowerCase());
+        var matchCat = activeCategory === 'All' || (p.category || '').toLowerCase() === activeCategory.toLowerCase();
+        var matchSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (p.category || '').toLowerCase().includes(searchQuery.toLowerCase());
         return matchCat && matchSearch;
       });
 
@@ -2698,8 +2710,6 @@
     }
 
     // ── LOGIN PAGE ──
-    let isLoggedIn = false;
-    let currentUser = { name: 'User', email: '' };
 
     function openLogin() {
       document.getElementById('loginPage').classList.add('open');
