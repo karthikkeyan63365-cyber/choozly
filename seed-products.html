@@ -3,6 +3,7 @@
 <head>
 <title>Upload 200 Products</title>
 </head>
+
 <body>
 
 <h2>Upload 200 Products</h2>
@@ -13,20 +14,21 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* PUT YOUR FIREBASE CONFIG HERE (copy from your website) */
+/* YOUR FIREBASE CONFIG */
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_BUCKET",
-  messagingSenderId: "YOUR_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAtsUgFdFRixQBqXyGKz4xkjbmPRwgxjnM",
+  authDomain: "choozly.firebaseapp.com",
+  projectId: "choozly",
+  storageBucket: "choozly.firebasestorage.app",
+  messagingSenderId: "645255668922",
+  appId: "1:645255668922:web:078a53fce6fbd725c88e83",
+  measurementId: "G-EDYY2LRQKV"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* CATEGORY LIST */
+/* CATEGORIES */
 const categories = [
 "Mobiles",
 "Electronics",
@@ -37,7 +39,7 @@ const categories = [
 "Home & Kitchen"
 ];
 
-/* IMAGE LIST */
+/* IMAGE LINKS */
 const images = [
 "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
 "https://images.unsplash.com/photo-1598327105666-5b89351aff97",
@@ -51,7 +53,7 @@ const images = [
 
 async function uploadProducts(){
 
-for(let i=1;i<=200;i++){
+for(let i = 1; i <= 200; i++){
 
 let category = categories[i % categories.length];
 let image = images[i % images.length];
@@ -61,14 +63,16 @@ await addDoc(collection(db,"products"),{
 name: category + " Product " + i,
 category: category,
 price: Math.floor(Math.random()*20000)+500,
-originalPrice: Math.floor(Math.random()*25000)+1000,
+oldPrice: Math.floor(Math.random()*25000)+1000,
 discount: "-20%",
 emoji: "🛒",
-image: image
+image: image,
+inStock: true,
+createdAt: new Date()
 
 });
 
-console.log("Added product",i);
+console.log("Added product", i);
 
 }
 
