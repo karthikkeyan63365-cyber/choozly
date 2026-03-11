@@ -2383,6 +2383,30 @@
   <div class="toast" id="toast">✓ Added to cart</div>
 
   <script>
+    // ── FIREBASE INIT (must be first) ──
+    const firebaseConfig = {
+      apiKey: "AIzaSyAtsUgFdFRixQBqXyGKz4xkjbmPRwgxjnM",
+      authDomain: "choozly.firebaseapp.com",
+      projectId: "choozly",
+      storageBucket: "choozly.firebasestorage.app",
+      messagingSenderId: "645255668922",
+      appId: "1:645255668922:web:078a53fce6fbd725c88e83"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Track auth state
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        isLoggedIn = true;
+        currentUser = { name: user.displayName || 'Choozly User', email: user.email };
+      } else {
+        isLoggedIn = false;
+        currentUser = { name: 'User', email: '' };
+      }
+    });
+
     // ── CART STATE ──
     let cart = [];
     let currentQty = 1;
@@ -2393,6 +2417,7 @@
       setTimeout(() => {
         document.getElementById('splash').classList.add('hide');
         document.getElementById('app').classList.add('show');
+        loadProducts();
       }, 2500);
     });
 
@@ -2501,8 +2526,7 @@
       renderHomeProducts();
     }
 
-    // Load products from Firestore on start
-    loadProducts();
+    // Load products after splash
 
     // ── OPEN PRODUCT PAGE ──
     function openProduct(id) {
@@ -2693,31 +2717,7 @@
       document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
     }
 
-    // ── FIREBASE REAL AUTH ──
-    // ── FIREBASE REAL AUTH (Compat) ──
-    const firebaseConfig = {
-      apiKey: "AIzaSyAtsUgFdFRixQBqXyGKz4xkjbmPRwgxjnM",
-      authDomain: "choozly.firebaseapp.com",
-      projectId: "choozly",
-      storageBucket: "choozly.firebasestorage.app",
-      messagingSenderId: "645255668922",
-      appId: "1:645255668922:web:078a53fce6fbd725c88e83"
-    };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    // Track auth state
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        isLoggedIn = true;
-        currentUser = { name: user.displayName || 'Choozly User', email: user.email };
-      } else {
-        isLoggedIn = false;
-        currentUser = { name: 'User', email: '' };
-      }
-    });
 
     async function handleLogin() {
       const nameEl = document.getElementById('signupName');
