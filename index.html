@@ -2001,13 +2001,19 @@
     .nav-icon-btn { gap: 6px; }
 
     /* ── CATEGORIES BAR ── */
-    .categories-scroll {
-      width: 100%;
-      padding: 8px 24px;
-      background: white;
-      border-bottom: 2px solid #e8e8e8;
-      gap: 4px;
-    }
+   /* line 2004 inside @media (min-width: 768px) */
+.categories-scroll {
+  display: none; /* ✅ sidebar handles categories on desktop — hide this */
+}
+```
+
+---
+
+## 📍 Exactly where in the file
+```
+index.html
+  └── line ~1841  →  @media (min-width: 768px) {
+        └── line 2004  →  .categories-scroll { ← REPLACE THIS WHOLE BLOCK }
 
     .chip {
       padding: 5px 16px;
