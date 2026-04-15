@@ -2812,6 +2812,7 @@
     let products = [];
     let activeCategory = 'All';
     let searchQuery = '';
+    
     const CATEGORY_IMAGES = {
   mobile: [
     'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop',
@@ -2868,20 +2869,37 @@ function getCategoryImage(category, index) {
       container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--subtext)"><div style="font-size:2rem;margin-bottom:10px">⏳</div><div>Loading products...</div></div>';
       try {
         const snapshot = await db.collection('products').get();
-        products = snapshot.docs.map(function(doc) {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            name: d.name || 'Product',
-            category: d.category || 'General',
-            emoji: d.emoji || '📦',
-            image: getCategoryImage((d.category || '').toLowerCase(), snapshot.docs.indexOf(doc)),
-            discount: d.discount || '',
-            inStock: d.inStock !== false,
-            price: '₹' + Number(d.price || 0).toLocaleString('en-IN'),
-            oldPrice: '₹' + Number(d.oldPrice || 0).toLocaleString('en-IN')
-          };
-        });
+        products = snapshot.docs.map(function(doc, index) {
+  const d = doc.data();
+
+  // ✅ FIX category properly
+  let categoryKey = (d.category || 'electronics')
+    .toLowerCase()
+    .replace(/&/g, '')
+    .trim();
+
+  if (categoryKey.includes('home')) categoryKey = 'home';
+  else if (categoryKey.includes('mobile')) categoryKey = 'mobile';
+  else if (categoryKey.includes('electronic')) categoryKey = 'electronics';
+  else if (categoryKey.includes('cloth')) categoryKey = 'clothes';
+  else if (categoryKey.includes('footwear')) categoryKey = 'footwear';
+  else if (categoryKey.includes('book')) categoryKey = 'books';
+  else if (categoryKey.includes('toy')) categoryKey = 'toys';
+  else if (categoryKey.includes('beauty')) categoryKey = 'beauty';
+  else if (categoryKey.includes('sport')) categoryKey = 'sports';
+
+  return {
+    id: doc.id,
+    name: d.name || 'Product',
+    category: d.category || 'electronics',
+    emoji: d.emoji || '📦',
+    image: getCategoryImage(categoryKey, index), // ✅ correct
+    discount: d.discount || '',
+    inStock: d.inStock !== false,
+    price: '₹' + Number(d.price || 0).toLocaleString('en-IN'),
+    oldPrice: '₹' + Number(d.oldPrice || 0).toLocaleString('en-IN')
+  };
+});
         renderHomeProducts();
       } catch(e) {
         console.error('Firestore error:', e);
